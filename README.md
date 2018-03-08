@@ -17,6 +17,11 @@ Add the following line below to your `esp32_build_config.rb`:
 
 Example of controlling the OLED display with SSD1306 controller.
 
+### Demo movie
+
+![movie](ESP32_SSD1306_SPI_sample.gif)
+
+
 SPI Wiring
 ```
   SSD1306       NodeMCU-32S(ESP32)
