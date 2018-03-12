@@ -47,7 +47,7 @@ enum {
 // SPI HOST, only HSPI or VSPI
 #define HOST VSPI_HOST
 
-// SPI Object start
+// SPI Object
 typedef struct spi_config_t {
   uint8_t num_cs;           // Chip Select pin num
   uint8_t num_dc;           // Data/Command select pin num
