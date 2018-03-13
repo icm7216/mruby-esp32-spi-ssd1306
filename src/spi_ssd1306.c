@@ -406,9 +406,6 @@ ssd1306_init(spi_config_t *spicfg)
 
   // Send all commands
   send_data(spicfg, ssd1306_init_cmds, sizeof(ssd1306_init_cmds), DC_CMD);
-
-  // Clear the OLED frame buffer
-  buffer_clear();
 }
 
 // mruby data_type
