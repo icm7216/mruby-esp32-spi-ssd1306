@@ -19,6 +19,13 @@
 
 #include "tiny_grafx.h"
 
+// SSD1306 display config
+#define SSD1306_DISPLAY_WIDTH   128
+#define SSD1306_DISPLAY_HEIGHT  64
+#define SSD1306_DISPLAY_PIXSEL  1024
+#define SSD1306_FONT_WIDTH      8
+#define SSD1306_FONT_HEIGHT     8 
+
 // D/C pin mode, command or data
 enum {
     DC_CMD,
@@ -34,18 +41,18 @@ enum {
 #define NO_DMA_TRANSACTION_DATA_SIZE 32 
 
 // default SSD1306 wiring and SPI configuration
-#define PIN_NUM_CS   5
-#define PIN_NUM_DC   16
-#define PIN_NUM_RST  17
-#define PIN_NUM_MOSI 23
-#define PIN_NUM_SCK  18
-#define PIN_NUM_MISO 19
-#define CLOCK_SPEED_HZ (10*1000*1000)   // SPI Clock freq=10 MHz
-#define SPI_MODE 0
-#define DMA DMA_CH1                     // default DMA channel = 1
+#define SSD1306SPI_PIN_NUM_CS   5
+#define SSD1306SPI_PIN_NUM_DC   16
+#define SSD1306SPI_PIN_NUM_RST  17
+#define SSD1306SPI_PIN_NUM_MOSI 23
+#define SSD1306SPI_PIN_NUM_SCK  18
+#define SSD1306SPI_PIN_NUM_MISO 19
+#define SSD1306SPI_CLOCK_SPEED_HZ (10*1000*1000)   // SPI Clock freq=10 MHz
+#define SSD1306SPI_SPI_MODE 0
+#define SSD1306SPI_DMA DMA_CH1                     // default DMA channel = 1
 
 // SPI HOST, only HSPI or VSPI
-#define HOST VSPI_HOST
+#define SSD1306SPI_HOST VSPI_HOST
 
 // SPI Object
 typedef struct spi_config_t {
@@ -216,14 +223,14 @@ static void
 spi_pre_transfer_callback(spi_transaction_t *t)
 {
   uint32_t dc = (uint32_t)t->user;
-  gpio_set_level(PIN_NUM_DC, dc);
+  gpio_set_level(SSD1306SPI_PIN_NUM_DC, dc);
 }
 
 // reset the D/C line
 static void
 spi_post_transfer_callback(spi_transaction_t *t)
 {
-  gpio_set_level(PIN_NUM_DC, 0);
+  gpio_set_level(SSD1306SPI_PIN_NUM_DC, 0);
 }
 
 // Send buffer data to the OLED
@@ -287,16 +294,16 @@ ssd1306_display(spi_config_t *spicfg)
 
   if (spicfg->dma_ch == 0) {
     // NO DMA
-    buffer = (uint8_t *)malloc(DISPLAY_PIXSEL);
+    buffer = (uint8_t *)malloc(SSD1306_DISPLAY_PIXSEL);
   } else {
     // Use DMA_CH1 or DMA_CH2
-    buffer = (uint8_t *)heap_caps_malloc(DISPLAY_PIXSEL, MALLOC_CAP_DMA);
+    buffer = (uint8_t *)heap_caps_malloc(SSD1306_DISPLAY_PIXSEL, MALLOC_CAP_DMA);
   }
 
   if (buffer != NULL) {
-    memset(buffer, 0, DISPLAY_PIXSEL);
-    buffer_read(buffer, DISPLAY_PIXSEL);
-    send_data(spicfg, buffer, DISPLAY_PIXSEL, DC_DATA);
+    memset(buffer, 0, SSD1306_DISPLAY_PIXSEL);
+    buffer_read(buffer, SSD1306_DISPLAY_PIXSEL);
+    send_data(spicfg, buffer, SSD1306_DISPLAY_PIXSEL, DC_DATA);
   }
 
   if (spicfg->dma_ch == 0) {
@@ -341,13 +348,13 @@ spi_bus_init(spi_config_t *spicfg)
   spi_device_handle_t spi;
 
   // Initialize the SPI bus
-  err = spi_bus_initialize(HOST, &buscfg, spicfg->dma_ch);
+  err = spi_bus_initialize(SSD1306SPI_HOST, &buscfg, spicfg->dma_ch);
   if (err != ESP_OK) {
     ESP_LOGI(TAG, "spi_bus_init: spi_bus_initialize error=%d", err);
   }
 
   // Attach the OLED to the SPI bus
-  err = spi_bus_add_device(HOST, &devcfg, &spi);
+  err = spi_bus_add_device(SSD1306SPI_HOST, &devcfg, &spi);
   if (err != ESP_OK) {
     ESP_LOGI(TAG, "spi_bus_init: spi_bus_add_device error=%d", err);
   }
@@ -443,6 +450,16 @@ spi_init(mrb_state *mrb, mrb_value self)
   // Initialize the SSD1306
   ssd1306_init(spicfg);
 
+  // Initialize the TINYGRAFX
+  tinygrafx_config_t config = {
+    .display_width = SSD1306_DISPLAY_WIDTH,
+    .display_height = SSD1306_DISPLAY_HEIGHT,
+    .display_pixsel = SSD1306_DISPLAY_PIXSEL,
+    .font_width = SSD1306_FONT_WIDTH,
+    .font_height = SSD1306_FONT_HEIGHT
+  };
+  tinygrafx_init(config);
+
   return self;
 }
 
@@ -521,15 +538,15 @@ mrb_mruby_esp32_spi_ssd1306_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, ssd1306, "text", ssd1306_text, MRB_ARGS_REQ(3));
 
   struct RClass *constants = mrb_define_module_under(mrb, ssd1306, "Constants");
-  mrb_define_const(mrb, constants, "CS",        mrb_fixnum_value(PIN_NUM_CS));
-  mrb_define_const(mrb, constants, "DC",        mrb_fixnum_value(PIN_NUM_DC));
-  mrb_define_const(mrb, constants, "RST",       mrb_fixnum_value(PIN_NUM_RST));
-  mrb_define_const(mrb, constants, "MOSI",      mrb_fixnum_value(PIN_NUM_MOSI));
-  mrb_define_const(mrb, constants, "SCK",       mrb_fixnum_value(PIN_NUM_SCK));
-  mrb_define_const(mrb, constants, "MISO",      mrb_fixnum_value(PIN_NUM_MISO));
-  mrb_define_const(mrb, constants, "SPI_FREQ",  mrb_fixnum_value(CLOCK_SPEED_HZ));
-  mrb_define_const(mrb, constants, "SPI_MODE",  mrb_fixnum_value(SPI_MODE));
-  mrb_define_const(mrb, constants, "DMA",       mrb_fixnum_value(DMA));
+  mrb_define_const(mrb, constants, "CS",        mrb_fixnum_value(SSD1306SPI_PIN_NUM_CS));
+  mrb_define_const(mrb, constants, "DC",        mrb_fixnum_value(SSD1306SPI_PIN_NUM_DC));
+  mrb_define_const(mrb, constants, "RST",       mrb_fixnum_value(SSD1306SPI_PIN_NUM_RST));
+  mrb_define_const(mrb, constants, "MOSI",      mrb_fixnum_value(SSD1306SPI_PIN_NUM_MOSI));
+  mrb_define_const(mrb, constants, "SCK",       mrb_fixnum_value(SSD1306SPI_PIN_NUM_SCK));
+  mrb_define_const(mrb, constants, "MISO",      mrb_fixnum_value(SSD1306SPI_PIN_NUM_MISO));
+  mrb_define_const(mrb, constants, "SPI_FREQ",  mrb_fixnum_value(SSD1306SPI_CLOCK_SPEED_HZ));
+  mrb_define_const(mrb, constants, "SPI_MODE",  mrb_fixnum_value(SSD1306SPI_SPI_MODE));
+  mrb_define_const(mrb, constants, "DMA",       mrb_fixnum_value(SSD1306SPI_DMA));
   mrb_define_const(mrb, constants, "NO_DMA",    mrb_fixnum_value(NO_DMA));
   mrb_define_const(mrb, constants, "DMA_CH1",   mrb_fixnum_value(DMA_CH1));
   mrb_define_const(mrb, constants, "DMA_CH2",   mrb_fixnum_value(DMA_CH2));

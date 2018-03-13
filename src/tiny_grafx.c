@@ -44,18 +44,36 @@ static const char *TAG = "TINY_GRAFX";
 
 #include "tiny_grafx.h"
 
-// Pixel Buffer
-static uint8_t buffer[DISPLAY_PIXSEL];
+// TINYGRAFX config with Pixel Buffer
+static tinygrafx_config_t tinygrafx;
 
 // manipulate graphics
 //
 // This graphics libraries are adapted from OLEDDisplay.cpp by squix78/esp8266-oled-ssd1306.
 // https://github.com/squix78/esp8266-oled-ssd1306
 //
+
+void
+tinygrafx_init(tinygrafx_config_t config)
+{
+  tinygrafx.display_width = config.display_width;
+  tinygrafx.display_height = config.display_height;
+  tinygrafx.display_pixsel = config.display_pixsel;
+  tinygrafx.font_width = config.font_width;
+  tinygrafx.font_height = config.font_height;
+  
+  uint8_t *buffer;
+  buffer = (uint8_t *)malloc(tinygrafx.display_pixsel);
+  if (buffer != NULL) {
+    memset(buffer, 0, tinygrafx.display_pixsel);
+  }
+  tinygrafx.display_buffer = buffer; 
+}
+
 void 
 buffer_clear() 
 {
-  memset(buffer, 0x00, DISPLAY_PIXSEL);
+  memset(tinygrafx.display_buffer, 0x00, tinygrafx.display_pixsel);
 }
 
 void 
@@ -64,9 +82,9 @@ buffer_read(uint8_t *data, int16_t size)
   if (data == NULL) {
     ESP_LOGI(TAG, "buffer_read: data NULL error");
   }
-  if (size == DISPLAY_PIXSEL) {
-    for (int16_t i=0; i<DISPLAY_PIXSEL; i++) {
-      data[i] = buffer[i];
+  if (size == tinygrafx.display_pixsel) {
+    for (int16_t i=0; i<tinygrafx.display_pixsel; i++) {
+      data[i] = tinygrafx.display_buffer[i];
     }
   }
   else {
@@ -77,11 +95,11 @@ buffer_read(uint8_t *data, int16_t size)
 void 
 set_pixel(int16_t x, int16_t y, uint16_t color) 
 {
-  if ((x >= 0) && (x < DISPLAY_WIDTH) && (y >= 0) && (y < DISPLAY_HEIGHT)) {
+  if ((x >= 0) && (x < tinygrafx.display_width) && (y >= 0) && (y < tinygrafx.display_height)) {
     switch (color) {
-      case WHITE:   buffer[x + (y / 8) * DISPLAY_WIDTH] |=  (1 << (y & 7)); break;
-      case BLACK:   buffer[x + (y / 8) * DISPLAY_WIDTH] &= ~(1 << (y & 7)); break;
-      case INVERT:  buffer[x + (y / 8) * DISPLAY_WIDTH] ^=  (1 << (y & 7)); break;
+      case WHITE:   tinygrafx.display_buffer[x + (y / 8) * tinygrafx.display_width] |=  (1 << (y & 7)); break;
+      case BLACK:   tinygrafx.display_buffer[x + (y / 8) * tinygrafx.display_width] &= ~(1 << (y & 7)); break;
+      case INVERT:  tinygrafx.display_buffer[x + (y / 8) * tinygrafx.display_width] ^=  (1 << (y & 7)); break;
     }
   } 
 }
@@ -89,8 +107,8 @@ set_pixel(int16_t x, int16_t y, uint16_t color)
 int16_t 
 get_pixel(int16_t x, int16_t y) 
 {
-  if ((x >= 0) && (x < DISPLAY_WIDTH) && (y >= 0) && (y < DISPLAY_HEIGHT)) {
-    return (buffer[x + (y / 8) * DISPLAY_WIDTH] >> (y % 8)) & 0x1;
+  if ((x >= 0) && (x < tinygrafx.display_width) && (y >= 0) && (y < tinygrafx.display_height)) {
+    return (tinygrafx.display_buffer[x + (y / 8) * tinygrafx.display_width] >> (y % 8)) & 0x1;
   }
   else {
     return 0;
@@ -146,8 +164,8 @@ draw_vertical_line(int16_t x, int16_t y, int16_t h, int16_t color)
     y = 0;
   }
 
-  if ((y + h) > DISPLAY_HEIGHT) {
-    h = DISPLAY_HEIGHT - y; 
+  if ((y + h) > tinygrafx.display_height) {
+    h = tinygrafx.display_height - y; 
   }
 
   if (h <= 0) return;
@@ -165,8 +183,8 @@ draw_horizontal_line(int16_t x, int16_t y, int16_t w, int16_t color)
     x = 0;
   }
 
-  if ((x + w) > DISPLAY_WIDTH) {
-    w = DISPLAY_WIDTH - x; 
+  if ((x + w) > tinygrafx.display_width) {
+    w = tinygrafx.display_width - x; 
   }
 
   if (w <= 0) return;
@@ -256,10 +274,10 @@ draw_char(int16_t x, int16_t y, uint8_t c, int16_t color, int16_t fontsize)
   uint8_t row_pixel;
   uint16_t font_width;
 
-  for (int16_t y1 = 0; y1 < FONT_HEIGHT; y1++) {  
+  for (int16_t y1 = 0; y1 < tinygrafx.font_height; y1++) {  
     row_pixel = font8x8_basic[c][y1];
 
-    for (int16_t x1 = 0; x1 < FONT_WIDTH; x1++) {
+    for (int16_t x1 = 0; x1 < tinygrafx.font_width; x1++) {
       if (row_pixel & 0x01) {
         if (fontsize == 1) {
           set_pixel(x + x1, y + y1, color);
@@ -284,16 +302,16 @@ display_text(int16_t x, int16_t y, uint8_t *text, int16_t length, int16_t color,
   for (int16_t i = 0; i < length; i++) {
     if (text[i] == '\n') {
       x =0;
-      y += FONT_WIDTH * fontsize;
+      y += tinygrafx.font_width * fontsize;
     }
     else {
       draw_char(x, y, text[i], color, fontsize);
       if (fontsize == 1) {
-        x += FONT_WIDTH * fontsize;
+        x += tinygrafx.font_width * fontsize;
       }
       else {
         font_width = (fontsize & 0x01) + (fontsize / 2);
-        x += FONT_WIDTH * font_width;
+        x += tinygrafx.font_width * font_width;
       }
     }
   }

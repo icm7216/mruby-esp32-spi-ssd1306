@@ -1,11 +1,15 @@
 #ifndef TINYGRAFXH_
 #define TINYGRAFXH_
 
-#define DISPLAY_WIDTH   128
-#define DISPLAY_HEIGHT  64
-#define DISPLAY_PIXSEL (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8)
-#define FONT_WIDTH      8
-#define FONT_HEIGHT     8 
+// TINYGRAFX config
+typedef struct tinygrafx_config_t {
+  uint16_t display_width;
+  uint16_t display_height;
+  uint16_t display_pixsel;
+  uint8_t font_width;
+  uint8_t font_height;
+  uint8_t *display_buffer;
+} tinygrafx_config_t;
 
 #define BLACK   0
 #define WHITE   1
@@ -14,6 +18,7 @@
 // manipulate the graphics
 #define swap_int16_t(a, b) { int16_t t = a; a = b; b = t; }
 
+void tinygrafx_init(tinygrafx_config_t config);
 void buffer_clear();
 void buffer_read(uint8_t *data, int16_t size);
 void set_pixel(int16_t x, int16_t y, uint16_t color) ;
