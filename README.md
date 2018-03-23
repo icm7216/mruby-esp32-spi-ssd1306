@@ -53,6 +53,24 @@ In advance, you will need to add several mrbgems to `esp32_build_config.rb`
   conf.gem :github => "mruby-esp32/mruby-esp32-system"
 ```
 
+### Note:
+
+*   CS line is active-low signal. If assign another GPIO pin to use the second CS line, the initial setting of the second CS line must be HIGH level. This is important when connecting multiple devices to the same SPI bus.
+*   GPIO2, GPIO4, and GPIO12 pins are pulled down with default settings after reset.
+
+
+In this case, the following command will help.
+``` ruby
+include ESP32
+
+second_cs_line = 4
+GPIO::pinMode(second_cs_line, GPIO::OUTPUT)
+GPIO::digitalWrite(second_cs_line, GPIO::HIGH)
+
+oled1 = OLED::SSD1306SPI.new()
+oled2 = OLED::SSD1306SPI.new(cs: second_cs_line)
+```
+
 # Code
 ```ruby
 include ESP32
