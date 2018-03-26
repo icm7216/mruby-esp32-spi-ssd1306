@@ -56,7 +56,8 @@ In advance, you will need to add several mrbgems to `esp32_build_config.rb`
 ### Note:
 
 *   CS line is active-low signal. If assign another GPIO pin to use the second CS line, the initial setting of the second CS line must be HIGH level. This is important when connecting multiple devices to the same SPI bus.
-*   GPIO2, GPIO4, and GPIO12 pins are pulled down with default settings after reset.
+*   GPIO2, GPIO4, and GPIO12 pins are pulled down with default settings after reset.  
+See also: `4.10 IO_MUX Pad List` in the [ESP32 Technical Reference Manual](https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf)
 
 
 In this case, the following command will help.
