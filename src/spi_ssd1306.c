@@ -404,6 +404,7 @@ ssd1306_init(spi_config_t *spicfg)
   gpio_set_direction(spicfg->num_dc, GPIO_MODE_OUTPUT);
   gpio_set_direction(spicfg->num_rst, GPIO_MODE_OUTPUT);
   gpio_set_direction(spicfg->num_cs, GPIO_MODE_OUTPUT);
+  gpio_set_pull_mode(spicfg->num_cs, GPIO_PULLUP_ONLY);
 
   // Reset the display if host not in use
   if (spicfg->require_reset) {
